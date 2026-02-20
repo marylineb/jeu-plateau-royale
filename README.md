@@ -1,218 +1,157 @@
-# ♟ Plateau Royal — Échecs & Dames en PHP
+# 🌸 Sakura no Ban — 桜の盤
 
-> Jeu de plateau multi-modes en PHP procédural pur + CSS Grid.  
-> Sans JavaScript (sauf UI cosmétique), sans base de données.
+> *Plateau de cerisier* — Un jeu d'échecs & dames au thème japonais, développé en PHP pur.
 
----
-
-## 📁 Structure
-
-```
-jeu/
-├── index.php    ← Accueil : choix du jeu et du mode
-├── game.php     ← Moteur de jeu (plateau, règles, IA, rendu)
-├── ai.php       ← Fonctions de l'IA (inclus par game.php)
-├── reset.php    ← Réinitialise la session et redirige
-└── style.css    ← Thème Bois & Marbre
-```
+![PHP](https://img.shields.io/badge/PHP-8.0+-C4607A?style=flat-square&logo=php&logoColor=white)
+![CSS3](https://img.shields.io/badge/CSS3-Animations-F2A7BB?style=flat-square&logo=css3&logoColor=white)
+![Sessions](https://img.shields.io/badge/Sessions-PHP-8B1A2F?style=flat-square)
+![Licence](https://img.shields.io/badge/Licence-Pédagogique-FDE8EF?style=flat-square)
 
 ---
 
-## 🚀 Lancement
+## ✨ Présentation
+
+**Sakura no Ban** est un jeu de plateau jouable dans le navigateur, développé sans framework ni base de données. L'interface s'inspire de l'esthétique japonaise — papier washi, laque rouge, pétales de cerisier — avec une pluie de pétales SVG générés et animés entièrement en PHP + CSS.
+
+Le projet couvre deux jeux classiques :
+
+| Jeu | Plateau | Règles |
+|-----|---------|--------|
+| ♟ Échecs | 8 × 8 | Règles de base (roi, dame, tour, fou, cavalier, pion) |
+| ⬤ Dames | 10 × 10 | Règles françaises (prise obligatoire, promotion) |
+
+---
+
+## 🎮 Fonctionnalités
+
+- **2 jeux** sélectionnables depuis la page d'accueil
+- **2 modes de jeu** — 2 joueurs sur le même écran ou solo contre l'IA
+- **IA fonctionnelle** — stratégie de capture prioritaire, coups aléatoires sinon
+- **Prise obligatoire** respectée aux dames
+- **Promotion** automatique (pion → dame aux dames / pion → reine aux échecs)
+- **Détection de fin de partie** — échec et mat, pat, victoire aux dames
+- **Historique des coups** affiché en notation algébrique
+- **Pluie de pétales SVG** sur l'accueil — zéro JavaScript, 100% PHP + CSS
+- **Design responsive** — jouable sur mobile
+- Interface **thème Sakura** 🌸 — rose, laque, washi, typographie japonisante
+
+---
+
+## 🛠️ Technologies
+
+| Technologie | Usage |
+|-------------|-------|
+| **PHP 8+** | Logique de jeu, sessions, génération des pétales |
+| **HTML5** | Structure, SVG inline pour les pétales |
+| **CSS3** | Thème, animations `@keyframes`, CSS Grid, variables custom |
+| **JavaScript** | Uniquement pour la synchro visuelle des boutons radio (3 lignes) |
+| **Sessions PHP** | Stockage de l'état complet du plateau entre chaque requête |
+
+> ⚠️ Pas de base de données, pas de framework, pas de dépendances npm.
+
+---
+
+## 📁 Structure du projet
+
+```
+sakura-no-ban/
+│
+├── index.php      ← Accueil : choix du jeu, du mode, pluie de pétales
+├── game.php       ← Moteur de jeu (plateau, règles, IA, rendu HTML)
+├── ai.php         ← Fonctions de l'IA (inclus par game.php)
+├── reset.php      ← Réinitialise la session et redirige
+├── style.css      ← Thème Sakura complet
+└── README.md
+```
+
+---
+
+## 🚀 Installation
+
+### Prérequis
+- PHP 8.0 ou supérieur
+- Un serveur local (XAMPP, WAMP, Laragon) **ou** le serveur intégré PHP
+
+### Lancer le projet
 
 ```bash
+# Cloner le dépôt
+git clone https://github.com/ton-username/sakura-no-ban.git
+cd sakura-no-ban
+
+# Lancer le serveur PHP intégré
 php -S localhost:8000
-# puis ouvrir http://localhost:8000/index.php
+```
+
+Puis ouvrir dans le navigateur :
+
+```
+http://localhost:8000
+```
+
+### Avec XAMPP / WAMP / Laragon
+
+Copier le dossier dans `htdocs/` (XAMPP) ou `www/` (WAMP), puis accéder à :
+
+```
+http://localhost/sakura-no-ban
 ```
 
 ---
 
-## 🧠 Architecture et logique
+## 🧠 Concepts techniques abordés
 
-### PHP stateless → tout dans `$_SESSION`
+### Gestion d'état sans base de données
 
-PHP ne "mémorise" rien entre deux requêtes. Chaque clic sur une case envoie un POST, PHP repart de zéro. La solution : stocker **tout l'état du jeu** en session :
+PHP est stateless — il repart de zéro à chaque requête. Tout l'état du jeu (plateau, tour, pièces capturées, historique) est stocké en `$_SESSION` et persisté entre les clics.
+
+### Pattern PRG (Post / Redirect / Get)
+
+Chaque clic sur une case envoie un `POST` → PHP traite le coup → `header('Location: game.php')` → le navigateur fait un `GET`. Cela empêche le rejeu du coup au `F5`.
+
+```
+Joueur clique → POST → PHP traite → redirect → GET → page affichée
+```
+
+### Pétales SVG sans JavaScript
+
+PHP génère 24 éléments `<span>` avec des propriétés aléatoires injectées comme variables CSS custom (`--x`, `--delay`, `--duration`, `--sway`…). Les `@keyframes` CSS lisent ces variables pour animer chaque pétale indépendamment. Zéro JavaScript pour les animations.
 
 ```php
-$_SESSION['plateau']    // tableau 2D représentant le plateau
-$_SESSION['tour']       // 'B' ou 'N'
-$_SESSION['selected']   // case sélectionnée [r, c] ou null
-$_SESSION['historique'] // liste des coups en notation simplifiée
-$_SESSION['fin']        // message de fin ou null
-$_SESSION['captures']   // pièces capturées par chaque camp
-$_SESSION['last_move']  // dernier coup pour le surlignage doré
+// PHP génère, CSS anime
+$petals[] = [
+    'x'        => rand(0, 100),        // position horizontale aléatoire
+    'delay'    => rand(0, 140) / 10,   // décalage avant apparition
+    'duration' => rand(80, 160) / 10,  // vitesse de chute
+    // ...
+];
 ```
 
-### Pattern PRG (Post/Redirect/Get)
+### IA (niveau débutant)
 
-Chaque action (clic) est un POST → PHP traite → `header('Location: game.php')` → le navigateur fait un GET.
-
-```
-Joueur clique → POST game.php → PHP traite → redirect → GET game.php → HTML affiché
-```
-
-Cela évite le problème classique "F5 rejoue le dernier coup".
+L'IA liste tous ses coups possibles, priorise les captures (stratégiquement meilleur), puis choisit aléatoirement parmi les options restantes. Pas de calcul de profondeur (pas de minimax).
 
 ---
 
-## ♟ Logique des Échecs
+## 🎯 Ce que ce projet m'a appris
 
-### Représentation du plateau
-
-Tableau PHP 8x8. Chaque case = `null` (vide) ou une chaîne de 2 caractères :
-
-```
-'B' ou 'N'  +  'K','Q','R','B','N','P'
- couleur        Roi Dame Tour Fou Cavalier Pion
-```
-
-Exemples : `'BQ'` = Dame Blanche, `'NP'` = Pion Noir, `'BR'` = Tour Blanche.
-
-### Calcul des mouvements (`getMouvementsEchecs`)
-
-Chaque type de pièce a sa propre logique :
-
-| Pièce | Logique |
-|-------|---------|
-| Pion | Avance selon sa direction, capture en diagonal |
-| Tour | Glisse horizontalement/verticalement jusqu'à obstacle |
-| Fou | Glisse en diagonal jusqu'à obstacle |
-| Dame | Tour + Fou combinés |
-| Roi | 1 case dans toutes les directions |
-| Cavalier | Saut en L (2+1), passe par-dessus les pièces |
-
-Les pièces "glissantes" (Tour, Fou, Dame) utilisent une boucle `while` qui s'arrête dès qu'elle rencontre une pièce :
-
-```php
-while ($ajout($tr, $tc)) { $tr += $dr; $tc += $dc; }
-// $ajout retourne true si case vide (peut continuer), false si bloqué
-```
-
-### Légalité des coups (mouvements filtrés)
-
-Un coup est **légal** s'il ne laisse pas son propre Roi en échec. Pour vérifier :
-
-```php
-// 1. Simuler le coup sur une copie du plateau
-$sim = $board;
-$sim[$tr][$tc] = $sim[$r][$c];
-$sim[$r][$c]   = null;
-
-// 2. Vérifier si le Roi est en échec sur la simulation
-if (!estEnEchec($sim, $couleur)) {
-    $legaux[] = [$tr, $tc]; // coup légal
-}
-```
-
-`estEnEchec` parcourt toutes les pièces adverses et vérifie si l'une d'elles peut atteindre le Roi.
-
-### Échec et mat / Pat
-
-```php
-function etatFinEchecs(array $board, string $couleur): ?string {
-    // Chercher si la couleur a au moins 1 coup légal
-    for ($r = 0; $r < 8; $r++) {
-        for ($c = 0; $c < 8; $c++) {
-            if (!empty(getMouvementsLegaux($board, $r, $c, $couleur))) return null;
-        }
-    }
-    // Aucun coup légal →
-    return estEnEchec($board, $couleur) ? 'mat' : 'pat';
-    //  Roi attaqué = échec et mat     Roi en sécurité = pat (nul)
-}
-```
+- Gérer l'**état d'une application** sans base de données via les sessions PHP
+- Implémenter une **logique de jeu complexe** (règles d'échecs, prise obligatoire, détection d'échec et mat)
+- Maîtriser les **animations CSS** avec variables custom et `@keyframes`
+- Concevoir une **interface responsive** avec CSS Grid
+- Appliquer le pattern **PRG** pour éviter les duplications de requêtes
+- Créer une **IA simple** basée sur des heuristiques de priorité
 
 ---
 
-## ⬤ Logique des Dames (règles françaises, 10x10)
+## 👩🏽‍💻 Autrice
 
-### Plateau 10x10
-
-Seules les **cases noires** sont utilisées : `(r + c) % 2 === 1`.
-
-Les pions se placent sur les 4 premières rangées (Noirs) et 4 dernières (Blancs).
-
-### Prise obligatoire
-
-Aux dames françaises, si une prise est possible, le joueur **doit** prendre. L'application le vérifie avant chaque sélection :
-
-```php
-function aPrisesObligatoires(array $board, string $couleur): bool {
-    // Parcourir toutes les pièces et chercher une capture disponible
-    foreach ($mvs as $mv) {
-        if (!empty($mv['capture'])) return true;
-    }
-    return false;
-}
-```
-
-Si des prises existent, seules les pièces pouvant prendre sont sélectionnables.
-
-### Promotion
-
-- **Dames** : un pion atteignant la dernière rangée adverse devient Dame (`'BD'` ou `'ND'`).
-- **Échecs** : un pion atteignant la rangée opposée devient Dame (`'BQ'` ou `'NQ'`).
+**Maryline Biloa**
+Étudiante en développement web — passionnée par le frontend, le game design et les projets créatifs 💖
 
 ---
 
-## 🤖 Intelligence Artificielle
+## 📄 Licence
 
-L'IA joue toujours les **Noirs**. Après chaque coup du joueur (Blancs), si `$modeJeu === 'ai'` et `$tour === 'N'`, l'IA calcule et joue immédiatement son coup dans le même cycle PHP.
-
-### Stratégie de l'IA (niveau débutant)
-
-```php
-// 1. Lister TOUS les coups possibles des Noirs
-// 2. Séparer captures et déplacements normaux
-// 3. Préférer une capture si disponible (stratégiquement meilleur)
-// 4. Sinon, choisir un coup au hasard
-
-$pool = !empty($captures) ? $captures : $normaux;
-return $pool[array_rand($pool)];
-```
-
-C'est une IA de **niveau débutant** : elle ne calcule pas les conséquences futures (pas de minimax). Elle évite juste de "gaspiller" des captures.
-
----
-
-## 🎨 Interface
-
-### CSS Grid pour le plateau
-
-```css
-.board-8  { grid-template-columns: repeat(8, 70px); }
-.board-10 { grid-template-columns: repeat(10, 60px); }
-```
-
-Chaque case est un `<button type="submit">` dans un mini formulaire. Cliquer une case = soumettre un formulaire POST avec `r` et `c`.
-
-### Surligages visuels
-
-| État | Couleur |
-|------|---------|
-| Sélectionné | Vert |
-| Mouvement possible | Point vert semi-transparent |
-| Dernier coup joué | Or pâle |
-| Roi en échec | Rouge |
-
-### Pourquoi des `<button>` au lieu de `<a>` ?
-
-Les liens `<a>` font des GET. Pour envoyer des données (quelle case a été cliquée), on a besoin de POST. Chaque case est donc un bouton de formulaire.
-
----
-
-## ➕ Améliorations possibles
-
-| Fonctionnalité                        | Difficulté |
-|----------------                       |-----------|
-| Roque (échecs)                        | ⭐⭐ |
-| En passant (échecs)                   | ⭐⭐⭐ |
-| Prises multiples en chaîne (dames)    | ⭐⭐⭐ |
-| IA minimax (vraie stratégie).         | ⭐⭐⭐⭐⭐ |
-| Sauvegarde de parties (SQLite)        | ⭐⭐ |
-| Notation PGN (export).                | ⭐⭐⭐ |
-| Chronomètre par joueur                | ⭐⭐ (nécessite JS) |
-
----
-
-*Plateau Royal — PHP procédural, sessions, CSS Grid.*
+Projet personnel à but pédagogique.
+Libre d'utilisation pour l'apprentissage.
